@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>To-lags eller tre-lags token system?</title>
+<style>
+  :root {
+    --bg-page: #faf9f7;
+    --bg-card: #ffffff;
+    --bg-secondary: #f1efe8;
+    --bg-info: #e6f1fb;
+    --bg-success: #eaf3de;
+    --bg-warning: #faeeda;
+    --bg-danger: #fcebeb;
+    --text-primary: #2c2c2a;
+    --text-secondary: #5f5e5a;
+    --text-tertiary: #888780;
+    --text-info: #0c447c;
+    --text-success: #27500a;
+    --text-warning: #633806;
+    --text-danger: #791f1f;
+    --border-tertiary: rgba(60, 60, 56, 0.15);
+    --border-secondary: rgba(60, 60, 56, 0.3);
+    --border-info: #185fa5;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 24px 80px;
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 500;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    color: var(--text-secondary);
+    font-size: 16px;
+    margin: 0 0 48px;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 500;
+    margin: 56px 0 16px;
+    letter-spacing: -0.005em;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 0 8px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  p {
+    margin: 0 0 16px;
+    color: var(--text-secondary);
+  }
+
+  p strong { color: var(--text-primary); font-weight: 500; }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+    background: var(--bg-secondary);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .widget {
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    margin: 24px 0 32px;
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .controls-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-right: 4px;
+  }
+
+  .btn {
+    padding: 6px 14px;
+    font-size: 13px;
+    background: transparent;
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    transition: all 0.15s;
+  }
+  .btn:hover { background: var(--bg-secondary); }
+  .btn.active {
+    background: var(--bg-info);
+    color: var(--text-info);
+    border-color: var(--border-info);
+  }
+
+  .scenario-note {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    min-height: 40px;
+    line-height: 1.5;
+  }
+
+  .scenario-note em { font-style: italic; }
+  .scenario-note strong { color: var(--text-primary); font-weight: 500; }
+
+  svg { width: 100%; height: auto; }
+
+  .insight-box {
+    margin-top: 24px;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .insight-box strong { font-weight: 500; color: var(--text-primary); }
+  .insight-box p { margin: 6px 0 0; color: var(--text-secondary); }
+  .insight-box code { font-size: 12px; background: var(--bg-card); }
+
+  /* Table widget specific */
+  .table-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  @media (max-width: 720px) {
+    .table-grid { grid-template-columns: 1fr; }
+  }
+
+  .col-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .table-wrap {
+    background: var(--bg-card);
+    border: 0.5px solid var(--border-tertiary);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  .data-table thead tr {
+    background: var(--bg-secondary);
+    border-bottom: 0.5px solid var(--border-tertiary);
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: padding 0.3s ease;
+  }
+
+  .data-table tbody tr {
+    border-bottom: 0.5px solid var(--border-tertiary);
+  }
+  .data-table tbody tr:last-child { border-bottom: none; }
+
+  .data-table td {
+    padding: 12px 16px;
+    transition: padding 0.3s ease;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-success { background: var(--bg-success); color: var(--text-success); }
+  .badge-warning { background: var(--bg-warning); color: var(--text-warning); }
+  .badge-danger { background: var(--bg-danger); color: var(--text-danger); }
+
+  .row-count {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  .code-block {
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    line-height: 1.55;
+    position: relative;
+    transition: background 0.3s;
+  }
+
+  .code-component { background: var(--bg-secondary); }
+  .code-semantic { background: var(--bg-info); }
+  .code-primitive { background: var(--bg-secondary); }
+
+  .code-tag {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: var(--font-sans);
+  }
+
+  .code-component .code-tag { color: var(--text-tertiary); }
+  .code-semantic .code-tag { color: var(--text-info); }
+  .code-primitive .code-tag { color: var(--text-tertiary); }
+
+  .code-component { color: var(--text-primary); }
+  .code-component .comment { color: var(--text-tertiary); }
+  .code-component .accent { color: var(--text-info); }
+
+  .code-semantic, .code-semantic div { color: var(--text-info); }
+
+  .code-primitive { color: var(--text-secondary); }
+
+  .arrow-down {
+    text-align: center;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    margin: 4px 0;
+  }
+
+  .diff-note {
+    margin-top: 20px;
+    padding: 14px 18px;
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 44px;
+    transition: all 0.3s;
+  }
+  .diff-note strong { font-weight: 500; color: var(--text-primary); }
+  .diff-note code { font-size: 12px; background: var(--bg-card); }
+
+  .status-line {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-left: auto;
+  }
+  .status-line .ok { color: var(--text-success); font-weight: 500; }
+
+  .flash { animation: flash 0.6s ease; }
+  @keyframes flash {
+    0%, 100% { background: var(--bg-info); }
+    50% { background: var(--bg-warning); }
+  }
+
+  .footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 0.5px solid var(--border-tertiary);
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <h1>To-lags eller tre-lags token system?</h1>
+  <p class="subtitle">Det semantiske lag er ikke til diskussion. Spørgsmålet er om vi har brug for et separat dimension-lag når Tailwind allerede har en spacing-skala.</p>
+
+  <h2>1. De to mulige arkitekturer</h2>
+  <p>Begge arkitekturer har det semantiske lag. Forskellen er om semantiske tokens peger direkte på Tailwinds spacing-skala, eller går gennem et eksplicit <code>dimension-*</code> lag i mellem. Skift mellem scenarierne for at se hvad hver arkitektur kræver.</p>
+
+  <div class="widget">
+    <div class="controls">
+      <span class="controls-label">Scenarie:</span>
+      <button onclick="setScenario('rest')" id="btn-rest" class="btn active">I hverdagen</button>
+      <button onclick="setScenario('density')" id="btn-density" class="btn">Density-skifte</button>
+      <button onclick="setScenario('exception')" id="btn-exception" class="btn">Hairline border (0.5px)</button>
+      <button onclick="setScenario('rebrand')" id="btn-rebrand" class="btn">Rebrand: 4px → 6px</button>
+      <button onclick="setScenario('migration')" id="btn-migration" class="btn">Skift væk fra Tailwind</button>
+    </div>
+
+    <div id="scenario-note" class="scenario-note">
+      Sammenlign de to arkitekturer. Begge har et semantisk lag — forskellen er om der er et eksplicit dimension-lag mellem semantik og Tailwind, eller om semantikken peger direkte på Tailwind-værdier.
+    </div>
+
+    <svg viewBox="0 0 680 460" xmlns="http://www.w3.org/2000/svg" role="img">
+      <title>Sammenligning af to-lags og tre-lags token arkitektur</title>
+      <desc>Venstre: to-lags arkitektur med semantic tokens og Tailwind. Højre: tre-lags arkitektur med dimension-laget imellem.</desc>
+
+      <defs>
+        <marker id="arrow-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- LEFT: Two-layer architecture -->
+      <text x="170" y="30" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="14" font-weight="500" fill="#2c2c2a">To-lags</text>
+      <text x="170" y="48" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#888780">Tailwind som primitive</text>
+
+      <!-- Two-layer: Semantic -->
+      <g id="two-semantic">
+        <rect x="40" y="70" width="260" height="80" rx="12" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+        <text x="170" y="96" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="13" font-weight="500" fill="#085041">Semantic tokens</text>
+        <text x="170" y="116" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#0f6e56">spacing-inset-md</text>
+        <text x="170" y="132" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#0f6e56" id="two-sem-target">→ Tailwind 3 (12px)</text>
+      </g>
+
+      <line x1="170" y1="150" x2="170" y2="190" stroke="#888780" stroke-width="1" marker-end="url(#arrow-a)"/>
+
+      <!-- Two-layer: Tailwind -->
+      <g id="two-tailwind">
+        <rect x="40" y="200" width="260" height="80" rx="12" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+        <text x="170" y="226" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="13" font-weight="500" fill="#2c2c2a">Tailwind spacing</text>
+        <text x="170" y="246" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="two-tw-val">3 = 0.75rem (12px)</text>
+        <text x="170" y="262" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a">space-x-3, p-3, mt-3...</text>
+      </g>
+
+      <!-- Two-layer notes -->
+      <g id="two-notes">
+        <rect x="40" y="300" width="260" height="120" rx="8" fill="#fbfaf6" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+        <text x="56" y="322" font-family="-apple-system, sans-serif" font-size="11" font-weight="500" fill="#5f5e5a" id="two-verdict-label">Verdict:</text>
+        <text x="56" y="344" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="two-note-1">—</text>
+        <text x="56" y="362" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="two-note-2">—</text>
+        <text x="56" y="380" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="two-note-3">—</text>
+        <text x="56" y="398" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="two-note-4">—</text>
+      </g>
+
+      <!-- Divider -->
+      <line x1="340" y1="60" x2="340" y2="430" stroke="#888780" stroke-width="0.5" stroke-dasharray="2 4"/>
+
+      <!-- RIGHT: Three-layer architecture -->
+      <text x="510" y="30" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="14" font-weight="500" fill="#2c2c2a">Tre-lags</text>
+      <text x="510" y="48" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#888780">Med dimension-lag</text>
+
+      <!-- Three-layer: Semantic -->
+      <g id="three-semantic">
+        <rect x="380" y="70" width="260" height="56" rx="12" fill="#e1f5ee" stroke="#0f6e56" stroke-width="0.5"/>
+        <text x="510" y="92" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="13" font-weight="500" fill="#085041">Semantic tokens</text>
+        <text x="510" y="112" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#0f6e56" id="three-sem-target">spacing-inset-md → dim-300</text>
+      </g>
+
+      <line x1="510" y1="126" x2="510" y2="146" stroke="#888780" stroke-width="1" marker-end="url(#arrow-a)"/>
+
+      <!-- Three-layer: Dimension -->
+      <g id="three-dimension">
+        <rect x="380" y="146" width="260" height="56" rx="12" fill="#e6f1fb" stroke="#185fa5" stroke-width="0.5"/>
+        <text x="510" y="168" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="13" font-weight="500" fill="#0c447c">Dimension primitives</text>
+        <text x="510" y="188" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#185fa5" id="three-dim-val">dim-300 = 12px</text>
+      </g>
+
+      <line x1="510" y1="202" x2="510" y2="222" stroke="#888780" stroke-width="1" marker-end="url(#arrow-a)"/>
+
+      <!-- Three-layer: Tailwind -->
+      <g id="three-tailwind">
+        <rect x="380" y="222" width="260" height="56" rx="12" fill="#f1efe8" stroke="#5f5e5a" stroke-width="0.5"/>
+        <text x="510" y="244" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="13" font-weight="500" fill="#2c2c2a">Tailwind config</text>
+        <text x="510" y="264" text-anchor="middle" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="three-tw-val">'3': var(--dim-300)</text>
+      </g>
+
+      <!-- Three-layer notes -->
+      <g id="three-notes">
+        <rect x="380" y="300" width="260" height="120" rx="8" fill="#fbfaf6" stroke="#888780" stroke-width="0.5" stroke-dasharray="4 3"/>
+        <text x="396" y="322" font-family="-apple-system, sans-serif" font-size="11" font-weight="500" fill="#5f5e5a" id="three-verdict-label">Verdict:</text>
+        <text x="396" y="344" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="three-note-1">—</text>
+        <text x="396" y="362" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="three-note-2">—</text>
+        <text x="396" y="380" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="three-note-3">—</text>
+        <text x="396" y="398" font-family="-apple-system, sans-serif" font-size="11" fill="#5f5e5a" id="three-note-4">—</text>
+      </g>
+    </svg>
+
+    <div class="insight-box">
+      <strong id="insight-title">I hverdagen ligner de hinanden</strong>
+      <p id="insight-body">For 90% af det daglige arbejde gør de to arkitekturer det samme. Det er ved kant-tilfældene — undtagelser, rebrands, migrationer — at forskellen viser sig.</p>
+    </div>
+  </div>
+
+  <p><strong>I hverdagen:</strong> ligetil — semantiske tokens peger ned i den underliggende skala. To-lags er enklere.</p>
+  <p><strong>Density-skifte:</strong> begge arkitekturer håndterer det elegant via det semantiske lag.</p>
+  <p><strong>Hairline border (0.5px):</strong> findes ikke i Tailwinds default-skala. Tre-lags har allerede plads til den; to-lags skal udvide Tailwind config.</p>
+  <p><strong>Rebrand:</strong> tre-lags har én fil at ændre. To-lags ændrer Tailwind config — som påvirker alle direkte <code>space-x-3</code> brug.</p>
+  <p><strong>Skift væk fra Tailwind:</strong> tre-lags overlever — semantiske tokens beholder deres dimension-reference. To-lags skal omskrive alle semantiske tokens.</p>
+
+  <h2>2. Konkret eksempel: en patienttabel</h2>
+  <p>Det venstre felt viser en patienttabel. Det højre felt viser hvad der sker i token-systemet når du skifter density. Det vigtigste at lægge mærke til: <strong>komponentkoden ændres aldrig</strong>.</p>
+
+  <div class="widget">
+    <div class="controls">
+      <span class="controls-label">Density:</span>
+      <button onclick="setDensity('compact')" id="btn-density-compact" class="btn">Compact</button>
+      <button onclick="setDensity('default')" id="btn-density-default" class="btn active">Default</button>
+      <button onclick="setDensity('spacious')" id="btn-density-spacious" class="btn">Spacious</button>
+      <span class="status-line">Komponentkode: <span class="ok">uændret</span></span>
+    </div>
+
+    <div class="table-grid">
+      <div>
+        <div class="col-label">Rendered output</div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Patient</th>
+                <th>MRN</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Eriksen, A.</td>
+                <td>8472-031</td>
+                <td><span class="badge badge-success">Stable</span></td>
+              </tr>
+              <tr>
+                <td>Holm, B.</td>
+                <td>8472-088</td>
+                <td><span class="badge badge-warning">Review</span></td>
+              </tr>
+              <tr>
+                <td>Jensen, C.</td>
+                <td>8472-104</td>
+                <td><span class="badge badge-success">Stable</span></td>
+              </tr>
+              <tr>
+                <td>Lund, D.</td>
+                <td>8472-156</td>
+                <td><span class="badge badge-danger">Critical</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="row-count" id="row-count">4 rows · 220px high</div>
+      </div>
+
+      <div>
+        <div class="col-label">Token resolution</div>
+
+        <div class="code-block code-component">
+          <div class="code-tag">Komponent</div>
+          <div class="comment">// Table.tsx</div>
+          <div>td {</div>
+          <div style="padding-left: 12px;">padding: <span class="accent">var(--spacing-inset-md)</span></div>
+          <div style="padding-left: 28px;"><span class="accent">var(--spacing-inset-lg)</span>;</div>
+          <div>}</div>
+        </div>
+
+        <div class="arrow-down">↓</div>
+
+        <div id="sem-box" class="code-block code-semantic">
+          <div class="code-tag">Semantisk</div>
+          <div>--spacing-inset-md:</div>
+          <div style="padding-left: 12px;" id="sem-md">var(--dimension-300);  /* 12px */</div>
+          <div style="margin-top: 4px;">--spacing-inset-lg:</div>
+          <div style="padding-left: 12px;" id="sem-lg">var(--dimension-400);  /* 16px */</div>
+        </div>
+
+        <div class="arrow-down">↓</div>
+
+        <div class="code-block code-primitive">
+          <div class="code-tag">Primitiv</div>
+          <div>--dimension-200: 8px;</div>
+          <div>--dimension-300: 12px;</div>
+          <div>--dimension-400: 16px;</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="diff-note" class="diff-note">
+      <strong>Default layout</strong> — komfortabel læsbarhed for klinikere der scanner enkelte patienter ad gangen. Cellen polstres med <code>--spacing-inset-md</code> og <code>--spacing-inset-lg</code>.
+    </div>
+  </div>
+
+  <h2>3. Min anbefaling</h2>
+  <p>For et healthcare SaaS design system med flere produkter, en consultant involveret, og 5+ års levetid: <strong>tre-lags arkitekturen er værd at have</strong>. Den marginale kompleksitet er lille — det er én CSS variabel-fil ekstra — men I får tre konkrete fordele:</p>
+  <ol style="color: var(--text-secondary); padding-left: 24px;">
+    <li style="margin-bottom: 12px;"><strong>Konsistent navngivning på tværs af tools.</strong> <code>dimension-300</code> betyder det samme i Figma, dokumentation, semantic tokens og som kommentar i Tailwind config. Uden laget skal Figma-tokens enten hedde "12px" (og bryde når værdien ændres) eller hedde "Tailwind 3" (og være forvirrende for designere der ikke arbejder i Tailwind-syntaks).</li>
+    <li style="margin-bottom: 12px;"><strong>Plads til undtagelser fra Tailwinds skala.</strong> Hairline borders (0.5px) og touch targets (44px) findes ikke i Tailwinds default. De skal et sted hen, og dimension-laget er det naturlige hjem — uden at I ender med at vedligeholde en parallel Tailwind config med specielle navne som <code>0.125</code> eller <code>11</code>.</li>
+    <li><strong>Frakobling fra Tailwind.</strong> Hvis I om to-tre år vurderer at Tailwind ikke længere passer, beskytter dimension-laget jer. Semantic tokens er stadig gyldige, og I skal kun omskrive den ene config-fil der mapper Tailwind til jeres skala.</li>
+  </ol>
+  <p style="margin-top: 20px;">Den ærlige modposition: hvis Tailwind er jeres permanente platform, og I aldrig vil have undtagelser fra dens skala, er to-lags lige så god — og enklere. Det er en reel afvejning, ikke et indlysende valg.</p>
+
+  <div class="footer">
+    Standalone præsentation · åbnes i enhver moderne browser uden internetforbindelse.
+  </div>
+</div>
+
+<script>
+  // === Widget 1: Architecture comparison ===
+  const scenarios = {
+    rest: {
+      note: 'Sammenlign de to arkitekturer. Begge har et semantisk lag — forskellen er om der er et eksplicit dimension-lag mellem semantik og Tailwind, eller om semantikken peger direkte på Tailwind-værdier.',
+      title: 'I hverdagen ligner de hinanden',
+      body: 'For 90% af det daglige arbejde gør de to arkitekturer det samme. Det er ved kant-tilfældene — undtagelser, rebrands, migrationer — at forskellen viser sig.',
+      twoSemTarget: '→ Tailwind 3 (12px)',
+      twoTwVal: '3 = 0.75rem (12px)',
+      threeSemTarget: 'spacing-inset-md → dim-300',
+      threeDimVal: 'dim-300 = 12px',
+      threeTwVal: "'3': var(--dim-300)",
+      twoVerdict: 'Verdict: enklere',
+      twoNotes: ['• Færre lag at vedligeholde', '• Direkte mapping til Tailwind', '• Mindre indirektion i koden', ''],
+      threeVerdict: 'Verdict: marginalt mere',
+      threeNotes: ['• Et ekstra lag at vedligeholde', '• Tailwind config skal pege ind i', '  dimension-laget', '']
+    },
+    density: {
+      note: '<strong>Density-skifte</strong> (compact eller spacious) ændrer hvilke værdier semantic tokens peger på — fx <code>spacing-inset-md</code> går fra 12px til 6px.',
+      title: 'Begge arkitekturer klarer dette let',
+      body: 'Density-skifte foregår i det semantiske lag, som begge arkitekturer har. Det er ikke her forskellen ligger.',
+      twoSemTarget: '→ Tailwind 1.5 (6px)',
+      twoTwVal: '3 = 0.75rem (12px)',
+      threeSemTarget: 'spacing-inset-md → dim-150',
+      threeDimVal: 'dim-150 = 6px',
+      threeTwVal: "'3': var(--dim-300)",
+      twoVerdict: 'Verdict: virker fint',
+      twoNotes: ['• Re-bind semantic tokens', '• Tailwind config urørt', '• Komponenter urørt', ''],
+      threeVerdict: 'Verdict: virker fint',
+      threeNotes: ['• Re-bind semantic tokens', '• Tailwind config urørt', '• Dimension-værdier urørt', '']
+    },
+    exception: {
+      note: '<strong>Hairline border (0.5px)</strong> findes ikke i Tailwinds default-skala. Hvor lever værdien?',
+      title: 'Tre-lags har plads til undtagelser',
+      body: 'I to-lags arkitekturen skal hairline borderen tilføjes til Tailwind config med et tal-baseret navn. I tre-lags er der allerede et navngivet hjem til den.',
+      twoSemTarget: '→ Tailwind 0.125 (?)',
+      twoTwVal: 'Custom: 0.125 = 0.5px',
+      threeSemTarget: 'border-hairline → dim-12',
+      threeDimVal: 'dim-12 = 0.5px',
+      threeTwVal: "'0.125': var(--dim-12)",
+      twoVerdict: 'Verdict: akavet',
+      twoNotes: ['• Tilføj custom Tailwind-key', '• Navnet "0.125" er ikke', '  semantisk', '• Designere skal kende det'],
+      threeVerdict: 'Verdict: naturligt hjem',
+      threeNotes: ['• dim-12 navngives klart', '• Findes i Figma som token', '• Tailwind får alias hvis nødvendigt', '']
+    },
+    rebrand: {
+      note: '<strong>Rebrand fra 4px til 6px grid:</strong> alle dimension-værdier ændres. Hvor mange filer skal røres?',
+      title: 'Tre-lags isolerer rebrand-ændringen',
+      body: 'I to-lags skal Tailwind config ændres — og dét påvirker også alle direkte <code>space-x-3</code> brug i koden. I tre-lags ændres kun dimension-filen, og alt andet følger automatisk.',
+      twoSemTarget: '→ Tailwind 3 (18px)',
+      twoTwVal: '3 = 1.125rem (18px)',
+      threeSemTarget: 'spacing-inset-md → dim-300',
+      threeDimVal: 'dim-300 = 18px',
+      threeTwVal: "'3': var(--dim-300)",
+      twoVerdict: 'Verdict: rammer Tailwind',
+      twoNotes: ['• Tailwind config rebuild', '• Semantic tokens urørt', '• Direkte space-x-3 brug', '  ændres automatisk'],
+      threeVerdict: 'Verdict: én fil',
+      threeNotes: ['• Kun dimension-værdier ændres', '• Tailwind config urørt', '• Semantic tokens urørt', '• Alt andet følger automatisk']
+    },
+    migration: {
+      note: '<strong>Tænkt eksperiment:</strong> hvis I om 3 år flytter væk fra Tailwind til et andet system. Hvor meget skal omskrives?',
+      title: 'Tre-lags overlever migrationer',
+      body: 'I to-lags peger semantic tokens direkte på Tailwind — alle skal omskrives. I tre-lags peger semantic tokens på dimension-laget, som ikke ved noget om Tailwind. Kun mappingen mellem dimension og det nye system skal skrives.',
+      twoSemTarget: '→ ??? (Tailwind væk)',
+      twoTwVal: '(skal udskiftes)',
+      threeSemTarget: 'spacing-inset-md → dim-300',
+      threeDimVal: 'dim-300 = 12px',
+      threeTwVal: '(skal udskiftes)',
+      twoVerdict: 'Verdict: alt skal omskrives',
+      twoNotes: ['• Alle semantic tokens', '• Alle Tailwind-referencer', '• Alle direkte utility-brug', '  i komponentkode'],
+      threeVerdict: 'Verdict: én fil at omskrive',
+      threeNotes: ['• Semantic tokens overlever', '• Dimension-værdier overlever', '• Kun config-mappingen', '  skal skrives på ny']
+    }
+  };
+
+  function setScenario(mode) {
+    const s = scenarios[mode];
+    document.querySelectorAll('#btn-rest, #btn-density, #btn-exception, #btn-rebrand, #btn-migration').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-' + mode).classList.add('active');
+
+    document.getElementById('scenario-note').innerHTML = s.note;
+    document.getElementById('insight-title').textContent = s.title;
+    document.getElementById('insight-body').innerHTML = s.body;
+
+    document.getElementById('two-sem-target').textContent = s.twoSemTarget;
+    document.getElementById('two-tw-val').textContent = s.twoTwVal;
+    document.getElementById('three-sem-target').textContent = s.threeSemTarget;
+    document.getElementById('three-dim-val').textContent = s.threeDimVal;
+    document.getElementById('three-tw-val').textContent = s.threeTwVal;
+
+    document.getElementById('two-verdict-label').textContent = s.twoVerdict;
+    document.getElementById('two-note-1').textContent = s.twoNotes[0] || '';
+    document.getElementById('two-note-2').textContent = s.twoNotes[1] || '';
+    document.getElementById('two-note-3').textContent = s.twoNotes[2] || '';
+    document.getElementById('two-note-4').textContent = s.twoNotes[3] || '';
+
+    document.getElementById('three-verdict-label').textContent = s.threeVerdict;
+    document.getElementById('three-note-1').textContent = s.threeNotes[0] || '';
+    document.getElementById('three-note-2').textContent = s.threeNotes[1] || '';
+    document.getElementById('three-note-3').textContent = s.threeNotes[2] || '';
+    document.getElementById('three-note-4').textContent = s.threeNotes[3] || '';
+  }
+
+  // === Widget 2: Table density ===
+  const states = {
+    compact: {
+      cellPadding: '6px 12px',
+      semMd: 'var(--dimension-150);  /* 6px */',
+      semLg: 'var(--dimension-300);  /* 12px */',
+      diffTitle: 'Compact layout',
+      diffBody: 'Til data-tunge views hvor klinikere skal scanne mange rækker hurtigt. Mere information per skærm, mindre scroll. <strong>Table.tsx er ikke rørt</strong> — heller ikke de andre 40 komponenter der bruger samme tokens.',
+      rowCount: '4 rows · 148px high'
+    },
+    default: {
+      cellPadding: '12px 16px',
+      semMd: 'var(--dimension-300);  /* 12px */',
+      semLg: 'var(--dimension-400);  /* 16px */',
+      diffTitle: 'Default layout',
+      diffBody: 'Komfortabel læsbarhed for klinikere der scanner enkelte patienter ad gangen. Cellen polstres med <code>--spacing-inset-md</code> og <code>--spacing-inset-lg</code>.',
+      rowCount: '4 rows · 220px high'
+    },
+    spacious: {
+      cellPadding: '20px 24px',
+      semMd: 'var(--dimension-500);  /* 20px */',
+      semLg: 'var(--dimension-600);  /* 24px */',
+      diffTitle: 'Spacious layout',
+      diffBody: 'Til touch-baserede tablets på sengeafdelinger eller skærme der bruges på afstand. Større touch-targets, mere luft mellem rækker. <strong>Stadig samme komponentkode</strong> — kun de semantiske tokens peger på større primitives.',
+      rowCount: '4 rows · 300px high'
+    }
+  };
+
+  function setDensity(mode) {
+    const s = states[mode];
+    document.querySelectorAll('#btn-density-default, #btn-density-compact, #btn-density-spacious').forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-density-' + mode).classList.add('active');
+
+    document.querySelectorAll('.data-table th, .data-table td').forEach(c => {
+      c.style.padding = s.cellPadding;
+    });
+
+    document.getElementById('sem-md').textContent = s.semMd;
+    document.getElementById('sem-lg').textContent = s.semLg;
+
+    const semBox = document.getElementById('sem-box');
+    semBox.classList.remove('flash');
+    void semBox.offsetWidth;
+    semBox.classList.add('flash');
+
+    const diffNote = document.getElementById('diff-note');
+    diffNote.innerHTML = '<strong>' + s.diffTitle + '</strong> — ' + s.diffBody;
+
+    document.getElementById('row-count').textContent = s.rowCount;
+  }
+</script>
+</body>
+</html>
